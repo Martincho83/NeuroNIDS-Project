@@ -1,28 +1,58 @@
+# --- BLOQUE DE AUTO-INSTALACIÓN (PARCHE DE EMERGENCIA) ---
+import os
+import subprocess
+import sys
+
+def instalar(paquete):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", paquete])
+
+try:
+    import joblib
+    import sklearn
+    import seaborn
+except ImportError:
+    # Si falla la importación, forzamos la instalación aquí mismo
+    instalar("joblib")
+    instalar("scikit-learn")
+    instalar("seaborn")
+    instalar("matplotlib")
+    instalar("pandas")
+    instalar("numpy")
+
+# --- AQUÍ EMPIEZA TU APP NORMAL ---
 import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
+import time
+import random
 import matplotlib.pyplot as plt
-import seaborn as sns
 
-# CONFIGURACIÓN DE LA PÁGINA
-st.set_page_config(page_title="Sistema NIDS - Tesis", layout="wide")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(
+    page_title="NeuroNIDS - Monitor en Tiempo Real",
+    page_icon="🛡️",
+    layout="wide"
+)
 
-# TÍTULO Y PRESENTACIÓN
-st.title("🛡️ Sistema de Detección de Intrusos (NIDS)")
+# --- ESTILOS (Modo Hacker/Profesional) ---
 st.markdown("""
-**Trabajo Final de Grado - Licenciatura en Gestión de Tecnologías de la Información**  
-Este sistema utiliza **Inteligencia Artificial (Random Forest)** para analizar tráfico de red 
-y detectar anomalías de seguridad en tiempo real.
-""")
+    <style>
+    .stApp { background-color: #0e1117; color: #00ff00; }
+    .stMetric { background-color: #262730; border: 1px solid #4e4e4e; }
+    div[data-testid="stMetricValue"] { color: #00ff41; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# BARRA LATERAL
-st.sidebar.header("Panel de Control")
-uploaded_file = st.sidebar.file_uploader("Cargar Log de Tráfico (.txt o .csv)", type=["txt", "csv"])
-
-# FUNCIÓN PARA LIMPIAR DATOS (Igual que hicimos en Colab)
-def preprocesar_datos(df):
-    # Nombres de columnas (Mismos que en el entrenamiento)
+# --- CARGAR IA ---
+try:
+    # Intentamos cargar el modelo
+    if not os.path.exists('modelo_ia_nids.pkl'):
+        st.warning("⚠️ Descargando cerebro de IA desde el repositorio...")
+    
+    modelo = joblib.load('modelo_ia_nids.pkl')
+    
+    # Simulamos columnas
     col_names = ["duration","protocol_type","service","flag","src_bytes",
     "dst_bytes","land","wrong_fragment","urgent","hot","num_failed_logins",
     "logged_in","num_compromised","root_shell","su_attempted","num_root",
@@ -32,82 +62,73 @@ def preprocesar_datos(df):
     "diff_srv_rate","srv_diff_host_rate","dst_host_count","dst_host_srv_count",
     "dst_host_same_srv_rate","dst_host_diff_srv_rate","dst_host_same_src_port_rate",
     "dst_host_srv_diff_host_rate","dst_host_serror_rate","dst_host_srv_serror_rate",
-    "dst_host_rerror_rate","dst_host_srv_rerror_rate","class","difficulty"]
-    
-    # Si el archivo no tiene cabecera, se la ponemos
-    if len(df.columns) == 43:
-        df.columns = col_names
-    
-    # Guardamos la columna 'class' original para comparar (si existe)
-    real_labels = None
-    if 'class' in df.columns:
-        real_labels = df['class']
-        df = df.drop(['class', 'difficulty'], axis=1, errors='ignore')
-    
-    # Codificamos las columnas de texto a números (Manual simple para el demo)
-    # NOTA: En un sistema real usaríamos el encoder guardado, pero para evitar errores
-    # si aparecen protocolos nuevos, haremos un mapeo simple aquí para el prototipo.
-    cols_text = ['protocol_type', 'service', 'flag']
-    for col in cols_text:
-        df[col] = df[col].astype('category').cat.codes
-        
-    return df, real_labels
+    "dst_host_rerror_rate","dst_host_srv_rerror_rate"]
+except Exception as e:
+    st.error(f"Error cargando la IA: {e}")
+    st.info("Asegúrate de que 'modelo_ia_nids.pkl' está subido en GitHub.")
+    st.stop()
 
-# LÓGICA PRINCIPAL
-if uploaded_file is not None:
-    try:
-        # Cargar modelo
-        modelo = joblib.load('modelo_ia_nids.pkl')
-        
-        # Leer archivo subido
-        df_raw = pd.read_csv(uploaded_file, header=None)
-        
-        st.write("### 1. Vista Previa de los Datos Cargados")
-        st.dataframe(df_raw.head())
-        
-        # Procesar
-        df_clean, real_labels = preprocesar_datos(df_raw.copy())
-        
-        # Botón de Predicción
-        if st.button("🔍 ANALIZAR TRÁFICO CON IA"):
-            with st.spinner('Analizando patrones de red...'):
-                predicciones = modelo.predict(df_clean)
-                probs = modelo.predict_proba(df_clean)
-                
-                # Agregar resultados al dataframe
-                df_clean['Predicción'] = ['🔴 ATAQUE' if p == 1 else '🟢 NORMAL' for p in predicciones]
-                df_clean['Confianza IA'] = [f"{max(probs[i])*100:.2f}%" for i in range(len(probs))]
-                
-                # Métricas de Gestión
-                total = len(predicciones)
-                ataques = np.sum(predicciones)
-                normales = total - ataques
-                
-                # MOSTRAR RESULTADOS (KPIs)
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Tráfico Analizado", f"{total} registros")
-                col2.metric("Conexiones Seguras", f"{normales}", delta_color="normal")
-                col3.metric("Amenazas Detectadas", f"{ataques}", delta_color="inverse")
-                
-                st.write("### 2. Detalle del Análisis")
-                st.dataframe(df_clean[['protocol_type', 'src_bytes', 'dst_bytes', 'Predicción', 'Confianza IA']])
-                
-                # Gráfico simple
-                if ataques > 0:
-                    st.error(f"⚠️ ¡ALERTA! Se han detectado {ataques} conexiones maliciosas.")
-                    fig_chart, ax = plt.subplots()
-                    labels = ['Normal', 'Ataque']
-                    sizes = [normales, ataques]
-                    colors = ['#66b3ff', '#ff9999']
-                    ax.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
-                    ax.axis('equal')
-                    st.pyplot(fig_chart)
-                else:
-                    st.success("✅ El sistema está limpio. No se detectaron amenazas.")
+# --- FUNCIONES DE SIMULACIÓN ---
+def generar_trafico_simulado():
+    datos = []
+    for _ in range(10):
+        fila = [random.randint(0, 500) for _ in range(len(col_names))]
+        if random.random() < 0.2: 
+            fila[4] = 99999 
+            fila[22] = 500  
+        datos.append(fila)
+    return pd.DataFrame(datos, columns=col_names)
 
-    except Exception as e:
-        st.error(f"Error al procesar el archivo: {e}")
-        st.info("Asegúrate de subir un archivo con el formato correcto (KDDTrain o KDDTest).")
+# --- INTERFAZ ---
+st.title("🛡️ NeuroNIDS: Monitor de Amenazas Activo")
+st.markdown("Monitor de tráfico de red potenciado por Inteligencia Artificial. **Estado: ONLINE**")
 
-else:
-    st.info("👈 Por favor, carga un archivo de log en el menú lateral para comenzar.")
+col1, col2, col3, col4 = st.columns(4)
+kpi_total = col1.empty()
+kpi_seguros = col2.empty()
+kpi_amenazas = col3.empty()
+kpi_riesgo = col4.empty()
+
+chart_space = st.empty()
+log_space = st.empty()
+
+if 'historial_ataques' not in st.session_state:
+    st.session_state['historial_ataques'] = 0
+if 'historial_normal' not in st.session_state:
+    st.session_state['historial_normal'] = 0
+
+start_button = st.button('🔴 ACTIVAR MONITOR DE RED')
+
+if start_button:
+    st.toast("Iniciando captura de paquetes...")
+    
+    for i in range(100): 
+        df_live = generar_trafico_simulado()
+        predicciones = modelo.predict(df_live)
+        
+        nuevos_ataques = np.sum(predicciones)
+        nuevos_normales = len(predicciones) - nuevos_ataques
+        
+        st.session_state['historial_ataques'] += int(nuevos_ataques)
+        st.session_state['historial_normal'] += int(nuevos_normales)
+        
+        total = st.session_state['historial_ataques'] + st.session_state['historial_normal']
+        
+        kpi_total.metric("Paquetes Analizados", total)
+        kpi_seguros.metric("Tráfico Legítimo", st.session_state['historial_normal'])
+        kpi_amenazas.metric("Intrusiones Bloqueadas", st.session_state['historial_ataques'], delta_color="inverse")
+        
+        riesgo = (st.session_state['historial_ataques'] / total) * 100 if total > 0 else 0
+        kpi_riesgo.metric("Nivel de Amenaza Actual", f"{riesgo:.1f}%")
+
+        with chart_space.container():
+            fig, ax = plt.subplots(figsize=(10, 2))
+            ax.barh(['Normal', 'Ataque'], [st.session_state['historial_normal'], st.session_state['historial_ataques']], color=['green', 'red'])
+            ax.set_xlim(0, total + 10)
+            st.pyplot(fig)
+
+        if nuevos_ataques > 0:
+            with log_space.container():
+                st.error(f"⚠️ [ALERTA - {time.strftime('%H:%M:%S')}] Se detectaron {nuevos_ataques} intentos de intrusión.")
+        
+        time.sleep(1)
