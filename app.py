@@ -50,10 +50,21 @@ except Exception as e:
 def generar_trafico_simulado():
     datos = []
     for _ in range(10):
-        fila = [random.randint(0, 50) for _ in range(len(col_names))]
-        if random.random() < 0.2: 
-            fila[4] = 99999 
-            fila[22] = 500  
+        # 1. Base: Creamos una conexión "limpia" (todo ceros es lo más normal)
+        fila = [0] * len(col_names)
+        
+        # 2. Agregamos un poco de realismo "sano"
+        fila[0] = random.randint(0, 2)      # Duración baja
+        fila[1] = 1                         # Protocolo TCP (Simulado)
+        fila[4] = random.randint(100, 1000) # Bytes enviados (Navegación normal)
+        fila[5] = random.randint(200, 2000) # Bytes recibidos
+        
+        # 3. INYECTAR ATAQUE (Solo el 10% de las veces)
+        if random.random() < 0.1: 
+            fila[4] = 99999    # Bytes exagerados (Ataque DoS)
+            fila[22] = 500     # Muchas conexiones al mismo tiempo
+            fila[23] = 500     # srv_count alto
+            
         datos.append(fila)
     return pd.DataFrame(datos, columns=col_names)
 
