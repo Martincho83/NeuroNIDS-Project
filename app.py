@@ -1,25 +1,3 @@
-# --- BLOQUE DE AUTO-INSTALACIÓN (PARCHE DE EMERGENCIA) ---
-import os
-import subprocess
-import sys
-
-def instalar(paquete):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", paquete])
-
-try:
-    import joblib
-    import sklearn
-    import seaborn
-except ImportError:
-    # Si falla la importación, forzamos la instalación aquí mismo
-    instalar("joblib")
-    instalar("scikit-learn")
-    instalar("seaborn")
-    instalar("matplotlib")
-    instalar("pandas")
-    instalar("numpy")
-
-# --- AQUÍ EMPIEZA TU APP NORMAL ---
 import streamlit as st
 import pandas as pd
 import joblib
@@ -27,6 +5,7 @@ import numpy as np
 import time
 import random
 import matplotlib.pyplot as plt
+import os
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -35,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILOS (Modo Hacker/Profesional) ---
+# --- ESTILOS ---
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #00ff00; }
@@ -46,13 +25,12 @@ st.markdown("""
 
 # --- CARGAR IA ---
 try:
-    # Intentamos cargar el modelo
     if not os.path.exists('modelo_ia_nids.pkl'):
-        st.warning("⚠️ Descargando cerebro de IA desde el repositorio...")
+        st.error("⚠️ No se encuentra el archivo 'modelo_ia_nids.pkl'.")
+        st.stop()
     
     modelo = joblib.load('modelo_ia_nids.pkl')
     
-    # Simulamos columnas
     col_names = ["duration","protocol_type","service","flag","src_bytes",
     "dst_bytes","land","wrong_fragment","urgent","hot","num_failed_logins",
     "logged_in","num_compromised","root_shell","su_attempted","num_root",
@@ -63,12 +41,12 @@ try:
     "dst_host_same_srv_rate","dst_host_diff_srv_rate","dst_host_same_src_port_rate",
     "dst_host_srv_diff_host_rate","dst_host_serror_rate","dst_host_srv_serror_rate",
     "dst_host_rerror_rate","dst_host_srv_rerror_rate"]
+
 except Exception as e:
-    st.error(f"Error cargando la IA: {e}")
-    st.info("Asegúrate de que 'modelo_ia_nids.pkl' está subido en GitHub.")
+    st.error(f"Error crítico cargando la IA: {e}")
     st.stop()
 
-# --- FUNCIONES DE SIMULACIÓN ---
+# --- SIMULACIÓN ---
 def generar_trafico_simulado():
     datos = []
     for _ in range(10):
@@ -101,7 +79,6 @@ start_button = st.button('🔴 ACTIVAR MONITOR DE RED')
 
 if start_button:
     st.toast("Iniciando captura de paquetes...")
-    
     for i in range(100): 
         df_live = generar_trafico_simulado()
         predicciones = modelo.predict(df_live)
@@ -129,6 +106,6 @@ if start_button:
 
         if nuevos_ataques > 0:
             with log_space.container():
-                st.error(f"⚠️ [ALERTA - {time.strftime('%H:%M:%S')}] Se detectaron {nuevos_ataques} intentos de intrusión.")
+                st.error(f"⚠️ [ALERTA] Se detectaron {nuevos_ataques} intentos de intrusión.")
         
         time.sleep(1)
