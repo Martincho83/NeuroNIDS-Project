@@ -50,7 +50,7 @@ except Exception as e:
 def generar_trafico_simulado():
     datos = []
     for _ in range(10):
-        fila = [random.randint(0, 500) for _ in range(len(col_names))]
+        fila = [random.randint(0, 50) for _ in range(len(col_names))]
         if random.random() < 0.2: 
             fila[4] = 99999 
             fila[22] = 500  
