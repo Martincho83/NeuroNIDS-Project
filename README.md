@@ -37,6 +37,13 @@ El sistema se basa en un modelo de **Machine Learning Supervisado** entrenado pa
 *   **Inteligencia Artificial:** Scikit-Learn
 *   **Serialización:** Joblib
 
+### Arquitectura Cloud
+Para este proyecto se optó por un stack tecnológico de alto rendimiento y costo cero:
+- **Cloud Computing:** Despliegue en Streamlit Cloud utilizando entornos virtualizados de Python 3.10.
+- **Gestión de Dependencias:** Implementación de `Pipfile` para asegurar la reproducibilidad del entorno (Pipenv).
+- **Inteligencia Artificial:** Modelo Random Forest persistido con `joblib`, optimizado para análisis de patrones de tráfico.
+- **Visualización:** Gráficos dinámicos con `Matplotlib` integrados en una interfaz reactiva.
+
 ---
 
 ## 📊 Funcionalidades Clave
