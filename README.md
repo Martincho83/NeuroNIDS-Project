@@ -21,6 +21,12 @@ Puedes acceder al tablero de control operativo en el siguiente enlace:
 
 ---
 
+### El Dashboard de Detección
+Una vez entrenado el modelo de Inteligencia Artificial (Random Forest) y desplegada la aplicación en Streamlit Cloud, se obtuvo una interfaz de monitoreo operativa accesible vía web. El dashboard procesa el flujo de datos simulado en tiempo real, clasificando cada conexión como "Legítima" o "Ataque", y presentando KPIs críticos (Nivel de Amenaza, Paquetes Bloqueados) para la toma de decisiones inmediata ante incidentes de seguridad.
+![alt text](imagenes/neuronids-dashboard-final.png)
+
+---
+
 ## 🧠 Arquitectura Técnica
 
 El sistema se basa en un modelo de **Machine Learning Supervisado** entrenado para clasificar conexiones de red como "Normales" o "Ataques".
